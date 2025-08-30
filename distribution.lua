@@ -1,14 +1,30 @@
+N = 10000
 -- Box-Muller transform to generate standard normal random numbers
-function gaussian_random()
-    -- Generate two independent random numbers from a uniform distribution
-    local u1 = math.random()
-    local u2 = math.random()
+-- Truncated Gaussian random between 0 and n using Box-Muller
+function gaussianRandom(n, mean, stddev)
+    mean = mean or n / 2
+    stddev = stddev or n / 6   -- ~99.7% values fall within [0,n]
 
-    -- Box-Muller transform to get a standard normal random variable
-    local z0 = math.sqrt(-2 * math.log(u1)) * math.cos(2 * math.pi * u2)
+    while true do
+        local u1, u2
+        repeat
+            u1 = math.random()
+        until u1 > 0   -- avoid log(0)
+        u2 = math.random()
 
-    return z0 * 16.67 + 50
+        -- Box-Muller transform
+        local z0 = math.sqrt(-2 * math.log(u1)) * math.cos(2 * math.pi * u2)
+
+        -- Scale to mean/stddev
+        local value = z0 * stddev + mean
+
+        -- Accept only if inside [0, n]
+        if value >= 0 and value <= n then
+            return value
+        end
+    end
 end
+
 
 -- Normal random generator (uniform distribution between 0 and 1)
 function normal_random()
@@ -38,6 +54,44 @@ function count_ranges(list)
     return range_counts
 end
 
+-- Helper function to print range counts in order
+function print_counts(title, counts)
+    print(title)
+    local keys = {}
+    for k in pairs(counts) do
+        table.insert(keys, k)
+    end
+    table.sort(keys)
+    for _, range_start in ipairs(keys) do
+        print(string.format("%d-%d: %.0f", range_start, range_start + 10, counts[range_start]/1000 * 100) .. '%')
+    end
+end
+
+function print_graph(title, counts)
+    print(title)
+    local keys = {}
+    for k in pairs(counts) do
+        table.insert(keys, k)
+    end
+    table.sort(keys)
+
+    -- find max count for scaling
+    local max_count = 0
+    for _, k in ipairs(keys) do
+        if counts[k] > max_count then
+            max_count = counts[k]
+        end
+    end
+
+    -- print simple bar graph
+    for _, range_start in ipairs(keys) do
+        local bar_len = math.floor((counts[range_start] / max_count) * 50) -- max 50 chars
+        local bar = string.rep("*", bar_len)
+        print(string.format("%2d-%2d | %s (%.0f", range_start, range_start + 10, bar, counts[range_start]/N * 100) .. '%)')
+    end
+end
+
+
 glist = {}
 nlist = {}
 glistt = {}
@@ -47,12 +101,12 @@ nlistt = {}
 print("Comparing different random numbers:")
 
 -- Gaussian (Normal distribution)
-for i = 1, 1000 do
-    glist[i] = math.abs(gaussian_random())
+for i = 1, N do
+    glist[i] = math.abs(gaussianRandom(100))
 end
 
 -- Normal random (Uniform distribution)
-for i = 1, 1000 do
+for i = 1, N do
     nlist[i] = math.abs(normal_random())
 end
 
@@ -60,12 +114,12 @@ end
 math.randomseed(os.time())
 
 -- Gaussian (Normal distribution)
-for i = 1, 1000 do
-    glistt[i] = math.abs(gaussian_random())
+for i = 1, N do
+    glistt[i] = math.abs(gaussianRandom(100))
 end
 
 -- Normal random (Uniform distribution)
-for i = 1, 1000 do
+for i = 1, N do
     nlistt[i] = math.abs(normal_random())
 end
 
@@ -74,24 +128,15 @@ ncounts = count_ranges(nlist)
 gcountst = count_ranges(glistt)
 ncountst = count_ranges(nlistt)
 
-print("Gaussian Random Counts:")
-for range_start, count in pairs(gcounts) do
-    print(string.format("%d-%d: %d", range_start, range_start + 10, count))
-end
+--print_counts("Gaussian Random Counts:", gcounts)
+print_graph("Gaussian Random Distribution Graph:", gcounts)
 
-print("Normal Random Counts:")
-for range_start, count in pairs(ncounts) do
-    print(string.format("%d-%d: %d", range_start, range_start + 10, count))
-end
+--print_counts("Normal Random Counts:", ncounts)
+print_graph("Normal Random Distribution Graph:", ncounts)
 
-print("Gaussian Random Counts (after reseeding):")
-for range_start, count in pairs(gcountst) do
-    print(string.format("%d-%d: %d", range_start, range_start + 10, count))
-end
+--print_counts("Gaussian Random Counts (after reseeding):", gcountst)
+print_graph("Gaussian Random Distribution Graph (after reseeding):", gcountst)
 
-print("Normal Random Counts (after reseeding):")
-for range_start, count in pairs(ncountst) do
-    print(string.format("%d-%d: %d", range_start, range_start + 10, count))
-end
-
+--print_counts("Normal Random Counts (after reseeding):", ncountst)
+print_graph("Normal Random Distribution Graph (after reseeding):", ncountst)
 
