@@ -25,6 +25,7 @@ end
 function addqueen(a, r)
     if r > N then -- all queens have been placed?
         printsolution(a)
+        --os.exit() -- exit after first solution
     else -- try to place r-th queen
         for c = 1, N do
             if isplaceok(a, r, c) then
@@ -35,4 +36,10 @@ function addqueen(a, r)
     end
 end
 -- run the program
+start = os.time()
 addqueen({}, 1)
+addqueen({}, 1)
+addqueen({}, 1)
+addqueen({}, 1)
+addqueen({}, 1)
+print("Elapsed time: " .. os.time() - start)
